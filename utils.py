@@ -30,8 +30,14 @@ def parse_excel_file(filepath, upload_id):
                 
                 # Clean column names and handle unnamed columns
                 df.columns = df.columns.astype(str)
-                df.columns = [col.strip() if not col.startswith('Unnamed:') else f"Column_{i+1}" 
-                             for i, col in enumerate(df.columns)]
+                cleaned_columns = []
+                for i, col in enumerate(df.columns):
+                    col = col.strip()
+                    if col.startswith('Unnamed:') or col == '' or col == 'nan':
+                        cleaned_columns.append(f"Column_{i+1}")
+                    else:
+                        cleaned_columns.append(col)
+                df.columns = cleaned_columns
                 
                 # Convert to records and store
                 for index, row in df.iterrows():
@@ -78,9 +84,10 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
         if not x_axis or not y_axis:
             raise ValueError("Please select both X and Y axis columns")
             
-        # Check for invalid column names
-        if x_axis.startswith('Unnamed:') or y_axis.startswith('Unnamed:'):
-            raise ValueError("Invalid column selected. Please choose columns with proper names")
+        # Check for invalid column names (removed since we're now handling Column_ names)
+        # Allow Column_ names but warn about them
+        if x_axis.startswith('Column_') or y_axis.startswith('Column_'):
+            pass  # Allow renamed columns
         
         # Get data entries
         data_entries = DataEntry.query.filter_by(upload_id=upload_id).all()

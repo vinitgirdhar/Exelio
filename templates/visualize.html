@@ -34,6 +34,17 @@
                 </h5>
             </div>
             <div class="card-body">
+                <!-- Debug info -->
+                {% if columns %}
+                    <div class="alert alert-info mb-3">
+                        <small>Available columns: {{ columns|length }} columns detected</small>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-3">
+                        <small>No columns detected. Please re-upload your file.</small>
+                    </div>
+                {% endif %}
+                
                 <form id="chartForm">
                     <input type="hidden" id="uploadId" value="{{ upload.id }}">
                     
@@ -56,11 +67,13 @@
                         </label>
                         <select class="form-select" id="xAxis" required>
                             <option value="">Select X-axis column</option>
-                            {% for column in columns %}
-                                {% if not column.startswith('Unnamed:') %}
+                            {% if columns %}
+                                {% for column in columns %}
                                     <option value="{{ column }}">{{ column }}</option>
-                                {% endif %}
-                            {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>No columns available</option>
+                            {% endif %}
                         </select>
                     </div>
                     
@@ -69,12 +82,14 @@
                             <i class="fas fa-arrows-alt-v me-1"></i>Y-Axis
                         </label>
                         <select class="form-select" id="yAxis" required>
-                            <option value="">Select Y-axis column</option>
-                            {% for column in columns %}
-                                {% if not column.startswith('Unnamed:') %}
+                            <option value="">Select Y-axis column (numeric)</option>
+                            {% if columns %}
+                                {% for column in columns %}
                                     <option value="{{ column }}">{{ column }}</option>
-                                {% endif %}
-                            {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <option value="" disabled>No columns available</option>
+                            {% endif %}
                         </select>
                     </div>
                     

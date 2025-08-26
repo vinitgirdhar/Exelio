@@ -207,6 +207,98 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
         logging.error(f"Chart generation error: {e}")
         raise e
 
+def auto_select_columns(upload_id, chart_type):
+    """Automatically select best columns for the given chart type"""
+    try:
+        # Get data entries
+        data_entries = DataEntry.query.filter_by(upload_id=upload_id).limit(100).all()
+        
+        if not data_entries:
+            return None, None
+        
+        # Parse first few rows to understand data structure
+        data_rows = []
+        columns_info = {}
+        
+        for entry in data_entries[:20]:  # Sample first 20 rows
+            try:
+                row_data = json.loads(entry.data_json)
+                data_rows.append(row_data)
+                
+                # Analyze column types
+                for col, value in row_data.items():
+                    if col not in columns_info:
+                        columns_info[col] = {'numeric': 0, 'text': 0, 'total': 0, 'sample_values': []}
+                    
+                    columns_info[col]['total'] += 1
+                    if value is not None:
+                        try:
+                            float(value)
+                            columns_info[col]['numeric'] += 1
+                        except (ValueError, TypeError):
+                            columns_info[col]['text'] += 1
+                        
+                        if len(columns_info[col]['sample_values']) < 5:
+                            columns_info[col]['sample_values'].append(str(value))
+            except json.JSONDecodeError:
+                continue
+        
+        # Identify numeric and text columns
+        numeric_columns = []
+        text_columns = []
+        
+        for col, info in columns_info.items():
+            # Skip columns that are mostly empty or have generic names
+            if col.startswith('Column_') and info['total'] > 0:
+                # Check if it's mostly numeric
+                if info['numeric'] > info['text']:
+                    numeric_columns.append(col)
+                else:
+                    text_columns.append(col)
+            elif info['total'] > 0:
+                # Regular columns
+                if info['numeric'] > info['text']:
+                    numeric_columns.append(col)
+                else:
+                    text_columns.append(col)
+        
+        # Select columns based on chart type
+        x_axis = None
+        y_axis = None
+        
+        if chart_type == 'pie':
+            # For pie charts, need a category (text) and a value (numeric)
+            if text_columns and numeric_columns:
+                x_axis = text_columns[0]  # Category
+                y_axis = numeric_columns[0]  # Value
+        elif chart_type == 'bar':
+            # For bar charts, similar to pie
+            if text_columns and numeric_columns:
+                x_axis = text_columns[0]  # Category
+                y_axis = numeric_columns[0]  # Value
+            elif len(numeric_columns) >= 2:
+                x_axis = numeric_columns[0]
+                y_axis = numeric_columns[1]
+        elif chart_type == 'line':
+            # For line charts, prefer numeric for both or text for x and numeric for y
+            if len(numeric_columns) >= 2:
+                x_axis = numeric_columns[0]
+                y_axis = numeric_columns[1]
+            elif text_columns and numeric_columns:
+                x_axis = text_columns[0]
+                y_axis = numeric_columns[0]
+        elif chart_type == 'scatter':
+            # For scatter plots, need two numeric columns
+            if len(numeric_columns) >= 2:
+                x_axis = numeric_columns[0]
+                y_axis = numeric_columns[1]
+        
+        return x_axis, y_axis
+        
+    except Exception as e:
+        logging.error(f"Auto column selection error: {e}")
+        return None, None
+
 def format_file_size(size_bytes):
     """Format file size in human readable format"""
     if size_bytes == 0:

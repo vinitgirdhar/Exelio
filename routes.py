@@ -235,16 +235,35 @@ def api_chart_data(upload_id):
     if not upload or not upload.parsed:
         return jsonify({'error': 'Upload not found or not parsed'}), 404
     
-    x_axis = request.args.get('x_axis')
-    y_axis = request.args.get('y_axis')
     chart_type = request.args.get('chart_type', 'bar')
+    auto = request.args.get('auto') == 'true'
     
-    if not x_axis or not y_axis:
-        return jsonify({'error': 'X and Y axis parameters required'}), 400
+    if auto:
+        # Automatically select best columns
+        from utils import auto_select_columns
+        x_axis, y_axis = auto_select_columns(upload_id, chart_type)
+        
+        if not x_axis or not y_axis:
+            return jsonify({'error': 'Unable to automatically select columns. Data may not have suitable columns for this chart type.'}), 400
+    else:
+        x_axis = request.args.get('x_axis')
+        y_axis = request.args.get('y_axis')
+        
+        if not x_axis or not y_axis:
+            return jsonify({'error': 'X and Y axis parameters required'}), 400
     
     try:
         chart_data = generate_chart_data(upload_id, x_axis, y_axis, chart_type)
-        return jsonify(chart_data)
+        
+        if auto:
+            # Return both the chart data and selected columns
+            return jsonify({
+                'chart_data': chart_data,
+                'x_axis': x_axis,
+                'y_axis': y_axis
+            })
+        else:
+            return jsonify(chart_data)
     except Exception as e:
         logging.error(f"Chart data error: {e}")
         return jsonify({'error': str(e)}), 500

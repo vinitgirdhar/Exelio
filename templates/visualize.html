@@ -34,19 +34,10 @@
                 </h5>
             </div>
             <div class="card-body">
-                <!-- Debug info -->
-                {% if columns %}
-                    <div class="alert alert-info mb-3">
-                        <small>Available columns: {{ columns|length }} columns detected</small>
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning mb-3">
-                        <small>No columns detected. Please re-upload your file.</small>
-                    </div>
-                {% endif %}
-                
                 <form id="chartForm">
                     <input type="hidden" id="uploadId" value="{{ upload.id }}">
+                    <input type="hidden" id="xAxis" value="">
+                    <input type="hidden" id="yAxis" value="">
                     
                     <div class="mb-3">
                         <label for="chartType" class="form-label">
@@ -58,38 +49,6 @@
                             <option value="line">Line Chart</option>
                             <option value="scatter">Scatter Plot</option>
                             <option value="pie">Pie Chart</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="xAxis" class="form-label">
-                            <i class="fas fa-arrows-alt-h me-1"></i>X-Axis
-                        </label>
-                        <select class="form-select" id="xAxis" required>
-                            <option value="">Select X-axis column</option>
-                            {% if columns %}
-                                {% for column in columns %}
-                                    <option value="{{ column }}">{{ column }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option value="" disabled>No columns available</option>
-                            {% endif %}
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="yAxis" class="form-label">
-                            <i class="fas fa-arrows-alt-v me-1"></i>Y-Axis
-                        </label>
-                        <select class="form-select" id="yAxis" required>
-                            <option value="">Select Y-axis column (numeric)</option>
-                            {% if columns %}
-                                {% for column in columns %}
-                                    <option value="{{ column }}">{{ column }}</option>
-                                {% endfor %}
-                            {% else %}
-                                <option value="" disabled>No columns available</option>
-                            {% endif %}
                         </select>
                     </div>
                     
@@ -113,31 +72,30 @@
                         </button>
                     </div>
                     
-                    <!-- AI Chart Recommendations -->
-                    {% if chart_recommendations %}
+                    <!-- Quick Chart Suggestions -->
                     <div class="mt-4">
                         <h6 class="text-success">
-                            <i class="fas fa-magic me-2"></i>AI Suggestions
+                            <i class="fas fa-magic me-2"></i>Quick Charts
                         </h6>
-                        {% for recommendation in chart_recommendations[:3] %}
-                        <div class="card border-0 bg-light mb-2">
-                            <div class="card-body p-2">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <small class="fw-bold">{{ recommendation.chart_type|title }} Chart</small>
-                                        <br>
-                                        <small class="text-muted">{{ recommendation.x_axis }} vs {{ recommendation.y_axis }}</small>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="applyRecommendation('{{ recommendation.chart_type }}', '{{ recommendation.x_axis }}', '{{ recommendation.y_axis }}', '{{ recommendation.title }}')">
-                                        <i class="fas fa-magic"></i>
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary text-start" 
+                                    onclick="quickChart('bar')">
+                                <i class="fas fa-chart-bar me-2"></i>Bar Chart
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary text-start" 
+                                    onclick="quickChart('line')">
+                                <i class="fas fa-chart-line me-2"></i>Line Chart
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary text-start" 
+                                    onclick="quickChart('pie')">
+                                <i class="fas fa-chart-pie me-2"></i>Pie Chart
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary text-start" 
+                                    onclick="quickChart('scatter')">
+                                <i class="fas fa-chart-scatter me-2"></i>Scatter Plot
+                            </button>
                         </div>
-                        {% endfor %}
                     </div>
-                    {% endif %}
                 </form>
             </div>
         </div>
@@ -155,7 +113,7 @@
                 <div id="chartContainer" class="text-center py-5">
                     <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">Configure and generate your chart</h5>
-                    <p class="text-muted">Select chart type and axes to create your visualization</p>
+                    <p class="text-muted">Select chart type to create your visualization</p>
                 </div>
                 <canvas id="myChart" style="display: none;"></canvas>
             </div>
@@ -210,6 +168,12 @@
 <script>
 let currentChart = null;
 
+// Quick chart generation
+function quickChart(chartType) {
+    document.getElementById('chartType').value = chartType;
+    generateChart();
+}
+
 document.getElementById('chartForm').addEventListener('submit', function(e) {
     e.preventDefault();
     generateChart();
@@ -218,12 +182,10 @@ document.getElementById('chartForm').addEventListener('submit', function(e) {
 async function generateChart() {
     const uploadId = document.getElementById('uploadId').value;
     const chartType = document.getElementById('chartType').value;
-    const xAxis = document.getElementById('xAxis').value;
-    const yAxis = document.getElementById('yAxis').value;
     const chartTitle = document.getElementById('chartTitle').value;
     
-    if (!chartType || !xAxis || !yAxis) {
-        alert('Please select chart type and both axes');
+    if (!chartType) {
+        alert('Please select a chart type');
         return;
     }
     
@@ -235,21 +197,26 @@ async function generateChart() {
                 <span class="visually-hidden">Loading...</span>
             </div>
             <h5 class="text-muted">Generating chart...</h5>
+            <p class="text-muted small">Automatically selecting best columns for ${chartType} chart</p>
         </div>
     `;
     
     try {
-        const response = await fetch(`/api/chart-data/${uploadId}?chart_type=${chartType}&x_axis=${encodeURIComponent(xAxis)}&y_axis=${encodeURIComponent(yAxis)}`);
+        const response = await fetch(`/api/chart-data/${uploadId}?chart_type=${chartType}&auto=true`);
         
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.error || 'Failed to fetch chart data');
         }
         
-        const chartData = await response.json();
+        const result = await response.json();
+        
+        // Store the selected axes for saving
+        document.getElementById('xAxis').value = result.x_axis || '';
+        document.getElementById('yAxis').value = result.y_axis || '';
         
         // Display chart
-        displayChart(chartData, chartTitle);
+        displayChart(result.chart_data || result, chartTitle);
         
         // Enable save and export buttons
         document.getElementById('saveChart').disabled = false;

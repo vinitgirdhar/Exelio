@@ -83,11 +83,8 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
         # Validate input columns
         if not x_axis or not y_axis:
             raise ValueError("Please select both X and Y axis columns")
-            
-        # Check for invalid column names (removed since we're now handling Column_ names)
-        # Allow Column_ names but warn about them
-        if x_axis.startswith('Column_') or y_axis.startswith('Column_'):
-            pass  # Allow renamed columns
+        
+        logging.info(f"Generating {chart_type} chart with X={x_axis}, Y={y_axis}")
         
         # Get data entries
         data_entries = DataEntry.query.filter_by(upload_id=upload_id).all()
@@ -117,14 +114,23 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
                 
                 # Skip None values
                 if x_val is not None and y_val is not None:
-                    # Try to convert y_val to numeric
-                    try:
-                        y_val = float(y_val)
-                    except (ValueError, TypeError):
-                        non_numeric_count += 1
-                        continue
-                    
-                    data_rows.append({'x': str(x_val), 'y': y_val})
+                    # For pie charts, x can be text, y must be numeric
+                    if chart_type == 'pie':
+                        try:
+                            y_val = float(str(y_val).replace(',', ''))  # Remove commas from numbers
+                            data_rows.append({'x': str(x_val), 'y': y_val})
+                        except (ValueError, TypeError):
+                            non_numeric_count += 1
+                            continue
+                    else:
+                        # For other charts, try to convert y_val to numeric
+                        try:
+                            y_val = float(str(y_val).replace(',', ''))  # Remove commas from numbers
+                        except (ValueError, TypeError):
+                            non_numeric_count += 1
+                            continue
+                        
+                        data_rows.append({'x': str(x_val), 'y': y_val})
             except json.JSONDecodeError:
                 continue
         
@@ -133,9 +139,9 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
             
         if not data_rows:
             if non_numeric_count > 0:
-                raise ValueError(f"The Y-axis column '{y_axis}' does not contain numeric data")
+                raise ValueError(f"The Y-axis column '{y_axis}' does not contain numeric data suitable for charting")
             else:
-                raise ValueError(f"No valid data found for the selected columns")
+                raise ValueError(f"No valid data found for columns {x_axis} and {y_axis}")
         
         # Create DataFrame for processing
         df = pd.DataFrame(data_rows)
@@ -231,9 +237,10 @@ def auto_select_columns(upload_id, chart_type):
                         columns_info[col] = {'numeric': 0, 'text': 0, 'total': 0, 'sample_values': []}
                     
                     columns_info[col]['total'] += 1
-                    if value is not None:
+                    if value is not None and str(value).strip() != '':
                         try:
-                            float(value)
+                            # Try to convert to float, handling commas in numbers
+                            float(str(value).replace(',', ''))
                             columns_info[col]['numeric'] += 1
                         except (ValueError, TypeError):
                             columns_info[col]['text'] += 1
@@ -246,31 +253,42 @@ def auto_select_columns(upload_id, chart_type):
         # Identify numeric and text columns
         numeric_columns = []
         text_columns = []
+        all_columns = []
         
         for col, info in columns_info.items():
-            # Skip columns that are mostly empty or have generic names
-            if col.startswith('Column_') and info['total'] > 0:
-                # Check if it's mostly numeric
-                if info['numeric'] > info['text']:
+            if info['total'] > 0:
+                all_columns.append(col)
+                # Check if it's mostly numeric (more than 50% numeric values)
+                if info['numeric'] > 0 and info['numeric'] >= info['text']:
                     numeric_columns.append(col)
                 else:
                     text_columns.append(col)
-            elif info['total'] > 0:
-                # Regular columns
-                if info['numeric'] > info['text']:
-                    numeric_columns.append(col)
-                else:
-                    text_columns.append(col)
+        
+        # Log column analysis
+        logging.info(f"Column analysis: All={all_columns}, Numeric={numeric_columns}, Text={text_columns}")
         
         # Select columns based on chart type
         x_axis = None
         y_axis = None
         
         if chart_type == 'pie':
-            # For pie charts, need a category (text) and a value (numeric)
+            # For pie charts, need a category and a value
+            # First try text column for categories and numeric for values
             if text_columns and numeric_columns:
                 x_axis = text_columns[0]  # Category
                 y_axis = numeric_columns[0]  # Value
+            # If only numeric columns exist, use them
+            elif len(numeric_columns) >= 2:
+                x_axis = numeric_columns[0]
+                y_axis = numeric_columns[1]
+            # Use any available columns
+            elif len(all_columns) >= 2:
+                x_axis = all_columns[0]
+                y_axis = all_columns[1]
+            # Last resort - use same column for both if only one exists
+            elif len(all_columns) >= 1:
+                x_axis = all_columns[0]
+                y_axis = all_columns[0]
         elif chart_type == 'bar':
             # For bar charts, similar to pie
             if text_columns and numeric_columns:

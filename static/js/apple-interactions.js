@@ -1,36 +1,93 @@
-// Apple-style interactions and gestures
+// iOS-style interactions and gestures
 
-// Initialize Apple-style interactions when DOM is loaded
+// Initialize iOS-style interactions when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    initializeAppleInteractions();
+    initializeIOSInteractions();
     initializeScrollEffects();
     initializeTouchGestures();
-    initializeParallaxEffects();
+    initializeIOSNavigationEffects();
+    initializeSwipeGestures();
+    initializePullToRefresh();
+    createIOSLoadingStates();
 });
 
-function initializeAppleInteractions() {
-    // Add smooth hover effects to cards
+// Initialize iOS-style navigation effects
+function initializeIOSNavigationEffects() {
+    const navbar = document.querySelector('.navbar');
+    let scrolled = false;
+    
+    window.addEventListener('scroll', () => {
+        const currentScrollY = window.scrollY;
+        
+        if (currentScrollY > 10 && !scrolled) {
+            navbar.classList.add('scrolled');
+            scrolled = true;
+        } else if (currentScrollY <= 10 && scrolled) {
+            navbar.classList.remove('scrolled');
+            scrolled = false;
+        }
+    });
+    
+    // iOS-style navbar collapse animation
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const navbarCollapse = document.querySelector('.navbar-collapse');
+    
+    if (navbarToggler && navbarCollapse) {
+        navbarToggler.addEventListener('click', function() {
+            setTimeout(() => {
+                if (navbarCollapse.classList.contains('show')) {
+                    navbarCollapse.style.animation = 'slideInFromTop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                }
+            }, 10);
+        });
+    }
+}
+
+function initializeIOSInteractions() {
+    // iOS-style card interactions
     const cards = document.querySelectorAll('.card');
     cards.forEach(card => {
+        // Mouse interactions
         card.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-8px) scale(1.02)';
-            this.style.transition = 'all 0.3s cubic-bezier(0.23, 1, 0.320, 1)';
+            this.style.transform = 'translateY(-12px) scale(1.02)';
+            this.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         });
         
         card.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0) scale(1)';
         });
-    });
-
-    // Add ripple effect to buttons
-    const buttons = document.querySelectorAll('.btn');
-    buttons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            createRippleEffect(e, this);
+        
+        // Touch interactions for mobile
+        card.addEventListener('touchstart', function() {
+            this.style.transform = 'scale(0.98)';
+            this.style.transition = 'transform 0.1s ease';
+        });
+        
+        card.addEventListener('touchend', function() {
+            this.style.transform = 'scale(1)';
+            this.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         });
     });
 
-    // Add magnetic effect to logo
+    // iOS-style button interactions
+    const buttons = document.querySelectorAll('.btn');
+    buttons.forEach(button => {
+        button.addEventListener('touchstart', function() {
+            this.style.transform = 'scale(0.95)';
+            this.style.transition = 'transform 0.1s ease';
+        });
+        
+        button.addEventListener('touchend', function() {
+            this.style.transform = 'scale(1)';
+            this.style.transition = 'transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+        });
+        
+        button.addEventListener('click', function(e) {
+            createIOSRippleEffect(e, this);
+        });
+    });
+
+    // iOS-style logo magnetic effect
     const logo = document.querySelector('.logo-icon');
     if (logo) {
         logo.addEventListener('mousemove', function(e) {
@@ -38,19 +95,35 @@ function initializeAppleInteractions() {
             const x = e.clientX - rect.left - rect.width / 2;
             const y = e.clientY - rect.top - rect.height / 2;
             
-            this.style.transform = `translate(${x * 0.1}px, ${y * 0.1}px) scale(1.05)`;
+            this.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px) scale(1.1) rotate(${x * 0.1}deg)`;
+            this.style.transition = 'transform 0.1s ease';
         });
         
         logo.addEventListener('mouseleave', function() {
-            this.style.transform = 'translate(0, 0) scale(1)';
+            this.style.transform = 'translate(0, 0) scale(1) rotate(0deg)';
+            this.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
         });
     }
+    
+    // iOS-style form focus effects
+    const formControls = document.querySelectorAll('.form-control, .form-select');
+    formControls.forEach(control => {
+        control.addEventListener('focus', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.boxShadow = '0 0 0 4px rgba(0, 122, 255, 0.1), 0 8px 20px rgba(0, 0, 0, 0.1)';
+        });
+        
+        control.addEventListener('blur', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = '';
+        });
+    });
 }
 
-function createRippleEffect(event, element) {
+function createIOSRippleEffect(event, element) {
     const ripple = document.createElement('span');
     const rect = element.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
+    const size = Math.max(rect.width, rect.height) * 1.5;
     const x = event.clientX - rect.left - size / 2;
     const y = event.clientY - rect.top - size / 2;
     
@@ -60,12 +133,12 @@ function createRippleEffect(event, element) {
         height: ${size}px;
         left: ${x}px;
         top: ${y}px;
-        background: rgba(255, 255, 255, 0.3);
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
         border-radius: 50%;
         transform: scale(0);
-        animation: ripple 0.6s cubic-bezier(0.23, 1, 0.320, 1);
+        animation: iosRipple 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         pointer-events: none;
-        z-index: 1;
+        z-index: 10;
     `;
     
     element.style.position = 'relative';
@@ -73,8 +146,121 @@ function createRippleEffect(event, element) {
     element.appendChild(ripple);
     
     setTimeout(() => {
-        ripple.remove();
-    }, 600);
+        if (ripple.parentNode) {
+            ripple.remove();
+        }
+    }, 800);
+}
+
+// iOS-style swipe gestures
+function initializeSwipeGestures() {
+    let startX, startY, distX, distY;
+    let startTime;
+    
+    document.addEventListener('touchstart', function(e) {
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        startTime = Date.now();
+    }, { passive: true });
+    
+    document.addEventListener('touchend', function(e) {
+        if (!startX || !startY) return;
+        
+        const touch = e.changedTouches[0];
+        distX = touch.clientX - startX;
+        distY = touch.clientY - startY;
+        const elapsedTime = Date.now() - startTime;
+        
+        // Detect swipe gestures
+        if (Math.abs(distX) > Math.abs(distY) && Math.abs(distX) > 50 && elapsedTime < 300) {
+            if (distX > 0) {
+                // Swipe right
+                handleSwipeRight();
+            } else {
+                // Swipe left
+                handleSwipeLeft();
+            }
+        }
+        
+        startX = null;
+        startY = null;
+    }, { passive: true });
+}
+
+function handleSwipeRight() {
+    // Navigate back or show navigation
+    console.log('Swipe right detected');
+}
+
+function handleSwipeLeft() {
+    // Navigate forward or hide navigation
+    console.log('Swipe left detected');
+}
+
+// iOS-style pull to refresh
+function initializePullToRefresh() {
+    let startY, pullDistance = 0;
+    let isPulling = false;
+    
+    const pullIndicator = document.createElement('div');
+    pullIndicator.className = 'pull-to-refresh-indicator';
+    pullIndicator.innerHTML = `
+        <div class="pull-refresh-spinner"></div>
+        <div class="pull-refresh-text">Pull to refresh</div>
+    `;
+    document.body.insertBefore(pullIndicator, document.body.firstChild);
+    
+    document.addEventListener('touchstart', function(e) {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+            isPulling = true;
+        }
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', function(e) {
+        if (!isPulling || window.scrollY > 0) return;
+        
+        const currentY = e.touches[0].clientY;
+        pullDistance = Math.max(0, currentY - startY);
+        
+        if (pullDistance > 10) {
+            e.preventDefault();
+            const progress = Math.min(pullDistance / 100, 1);
+            
+            pullIndicator.style.transform = `translateY(${pullDistance - 60}px)`;
+            pullIndicator.style.opacity = progress;
+            
+            if (pullDistance > 80) {
+                pullIndicator.classList.add('ready-to-refresh');
+                pullIndicator.querySelector('.pull-refresh-text').textContent = 'Release to refresh';
+            } else {
+                pullIndicator.classList.remove('ready-to-refresh');
+                pullIndicator.querySelector('.pull-refresh-text').textContent = 'Pull to refresh';
+            }
+        }
+    }, { passive: false });
+    
+    document.addEventListener('touchend', function() {
+        if (!isPulling) return;
+        
+        if (pullDistance > 80) {
+            // Trigger refresh
+            pullIndicator.classList.add('refreshing');
+            pullIndicator.querySelector('.pull-refresh-text').textContent = 'Refreshing...';
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }
+        
+        pullIndicator.style.transform = 'translateY(-60px)';
+        pullIndicator.style.opacity = '0';
+        pullIndicator.classList.remove('ready-to-refresh');
+        
+        isPulling = false;
+        pullDistance = 0;
+    });
 }
 
 function initializeScrollEffects() {
@@ -186,35 +372,49 @@ function createFloatingParticles() {
     document.body.appendChild(particleContainer);
 }
 
-// CSS animations for particles
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes ripple {
+// CSS animations for iOS interactions
+const iosStyle = document.createElement('style');
+iosStyle.textContent = `
+    @keyframes iosRipple {
         to {
             transform: scale(2);
             opacity: 0;
         }
     }
     
-    @keyframes float-particle {
+    @keyframes iosFloatParticle {
         0% {
             transform: translateY(0px) rotate(0deg);
-            opacity: 1;
+            opacity: 0.4;
+        }
+        50% {
+            opacity: 0.8;
         }
         100% {
-            transform: translateY(-100vh) rotate(360deg);
+            transform: translateY(-120vh) rotate(360deg);
             opacity: 0;
         }
     }
     
-    .animate-in {
-        animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.320, 1) forwards;
+    @keyframes slideInFromTop {
+        0% {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        100% {
+            transform: translateY(0);
+            opacity: 1;
+        }
     }
     
-    /* Apple-style cursor interactions */
+    .animate-in {
+        animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    
+    /* iOS-style cursor interactions */
     .btn, .card, .nav-link {
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.23, 1, 0.320, 1);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     
     .btn:active {
@@ -224,8 +424,18 @@ style.textContent = `
     .card:active {
         transform: scale(0.98);
     }
+    
+    /* iOS-style table hover effects */
+    .table tbody tr {
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .table tbody tr:hover {
+        background: rgba(0, 122, 255, 0.08) !important;
+        transform: translateX(4px);
+    }
 `;
-document.head.appendChild(style);
+document.head.appendChild(iosStyle);
 
 // Add Apple-style preloader
 function showAppleLoader() {

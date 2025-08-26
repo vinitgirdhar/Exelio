@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Excel Analytics Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+    </h1>
+    <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Upload New File
+    </a>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="fas fa-file-upload fa-2x text-primary mb-2"></i>
+                <h3 class="card-title">{{ total_uploads }}</h3>
+                <p class="card-text text-muted">Total Uploads</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <h3 class="card-title">{{ successful_uploads }}</h3>
+                <p class="card-text text-muted">Successfully Parsed</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="fas fa-database fa-2x text-info mb-2"></i>
+                <h3 class="card-title">{{ format_file_size(total_size) }}</h3>
+                <p class="card-text text-muted">Total Data Size</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload History -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-history me-2"></i>Upload History
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if uploads %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Upload Date</th>
+                            <th>Size</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for upload in uploads %}
+                        <tr>
+                            <td>
+                                <i class="fas fa-file-excel text-success me-2"></i>
+                                {{ upload.original_filename }}
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ upload.upload_time.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ format_file_size(upload.file_size or 0) }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if upload.parsed %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Parsed
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Failed
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if upload.parsed %}
+                                        <a href="{{ url_for('view_data', upload_id=upload.id) }}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-chart-bar me-1"></i>Visualize
+                                        </a>
+                                    {% endif %}
+                                    
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="confirmDelete({{ upload.id }}, '{{ upload.original_filename }}')">
+                                        <i class="fas fa-trash me-1"></i>Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No uploads yet</h5>
+                <p class="text-muted">Upload your first Excel file to get started with data visualization.</p>
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                    <i class="fas fa-upload me-2"></i>Upload File
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteFilename"></strong>?</p>
+                <p class="text-danger">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    This action cannot be undone. All associated data and charts will be permanently deleted.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDelete(uploadId, filename) {
+    document.getElementById('deleteFilename').textContent = filename;
+    document.getElementById('deleteForm').action = `/delete-upload/${uploadId}`;
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+</script>
+{% endblock %}

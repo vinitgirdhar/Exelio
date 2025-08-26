@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Visualize Data - Excel Analytics Platform{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h2">
+            <i class="fas fa-chart-line me-2"></i>Data Visualization
+        </h1>
+        <p class="text-muted mb-0">
+            <i class="fas fa-file-excel me-1"></i>{{ upload.original_filename }}
+            <span class="mx-2">•</span>
+            <i class="fas fa-clock me-1"></i>{{ upload.upload_time.strftime('%Y-%m-%d %H:%M') }}
+        </p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <!-- Chart Configuration -->
+    <div class="col-lg-4">
+        <div class="card sticky-top">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>Chart Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="chartForm">
+                    <input type="hidden" id="uploadId" value="{{ upload.id }}">
+                    
+                    <div class="mb-3">
+                        <label for="chartType" class="form-label">
+                            <i class="fas fa-chart-bar me-1"></i>Chart Type
+                        </label>
+                        <select class="form-select" id="chartType" required>
+                            <option value="">Select chart type</option>
+                            <option value="bar">Bar Chart</option>
+                            <option value="line">Line Chart</option>
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="pie">Pie Chart</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="xAxis" class="form-label">
+                            <i class="fas fa-arrows-alt-h me-1"></i>X-Axis
+                        </label>
+                        <select class="form-select" id="xAxis" required>
+                            <option value="">Select X-axis column</option>
+                            {% for column in columns %}
+                            <option value="{{ column }}">{{ column }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="yAxis" class="form-label">
+                            <i class="fas fa-arrows-alt-v me-1"></i>Y-Axis
+                        </label>
+                        <select class="form-select" id="yAxis" required>
+                            <option value="">Select Y-axis column</option>
+                            {% for column in columns %}
+                            <option value="{{ column }}">{{ column }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="chartTitle" class="form-label">
+                            <i class="fas fa-heading me-1"></i>Chart Title (Optional)
+                        </label>
+                        <input type="text" class="form-control" id="chartTitle" 
+                               placeholder="Enter chart title">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-chart-line me-2"></i>Generate Chart
+                        </button>
+                        <button type="button" class="btn btn-outline-success" id="saveChart" disabled>
+                            <i class="fas fa-save me-2"></i>Save Chart
+                        </button>
+                        <button type="button" class="btn btn-outline-info" id="exportChart" disabled>
+                            <i class="fas fa-download me-2"></i>Export PNG
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart Display -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>Chart Preview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="chartContainer" class="text-center py-5">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Configure and generate your chart</h5>
+                    <p class="text-muted">Select chart type and axes to create your visualization</p>
+                </div>
+                <canvas id="myChart" style="display: none;"></canvas>
+            </div>
+        </div>
+        
+        <!-- Data Preview -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-table me-2"></i>Data Preview (First 10 rows)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if preview_data %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-dark">
+                                <tr>
+                                    {% for column in columns %}
+                                    <th>{{ column }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview_data %}
+                                <tr>
+                                    {% for column in columns %}
+                                    <td>
+                                        {% if row[column] %}
+                                            {{ row[column][:50] }}{% if row[column]|length > 50 %}...{% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-exclamation-triangle text-warning fa-2x mb-2"></i>
+                        <p class="text-muted">No data preview available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentChart = null;
+
+document.getElementById('chartForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    generateChart();
+});
+
+async function generateChart() {
+    const uploadId = document.getElementById('uploadId').value;
+    const chartType = document.getElementById('chartType').value;
+    const xAxis = document.getElementById('xAxis').value;
+    const yAxis = document.getElementById('yAxis').value;
+    const chartTitle = document.getElementById('chartTitle').value;
+    
+    if (!chartType || !xAxis || !yAxis) {
+        alert('Please select chart type and both axes');
+        return;
+    }
+    
+    // Show loading state
+    const chartContainer = document.getElementById('chartContainer');
+    chartContainer.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="text-muted">Generating chart...</h5>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch(`/api/chart-data/${uploadId}?chart_type=${chartType}&x_axis=${encodeURIComponent(xAxis)}&y_axis=${encodeURIComponent(yAxis)}`);
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch chart data');
+        }
+        
+        const chartData = await response.json();
+        
+        // Display chart
+        displayChart(chartData, chartTitle);
+        
+        // Enable save and export buttons
+        document.getElementById('saveChart').disabled = false;
+        document.getElementById('exportChart').disabled = false;
+        
+    } catch (error) {
+        console.error('Error generating chart:', error);
+        chartContainer.innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-exclamation-triangle text-danger fa-3x mb-3"></i>
+                <h5 class="text-danger">Error generating chart</h5>
+                <p class="text-muted">${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function displayChart(chartData, title) {
+    const chartContainer = document.getElementById('chartContainer');
+    const canvas = document.getElementById('myChart');
+    
+    // Hide container, show canvas
+    chartContainer.style.display = 'none';
+    canvas.style.display = 'block';
+    
+    // Destroy existing chart
+    if (currentChart) {
+        currentChart.destroy();
+    }
+    
+    // Configure chart options
+    const config = {
+        type: chartData.type,
+        data: chartData.data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: !!title,
+                    text: title,
+                    font: {
+                        size: 16
+                    }
+                },
+                legend: {
+                    display: chartData.type === 'pie'
+                }
+            },
+            scales: chartData.type !== 'pie' ? {
+                y: {
+                    beginAtZero: true
+                }
+            } : {}
+        }
+    };
+    
+    // Create new chart
+    const ctx = canvas.getContext('2d');
+    currentChart = new Chart(ctx, config);
+}
+
+// Save chart functionality
+document.getElementById('saveChart').addEventListener('click', function() {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/save-chart';
+    
+    const fields = {
+        'upload_id': document.getElementById('uploadId').value,
+        'chart_type': document.getElementById('chartType').value,
+        'x_axis': document.getElementById('xAxis').value,
+        'y_axis': document.getElementById('yAxis').value,
+        'title': document.getElementById('chartTitle').value
+    };
+    
+    for (const [name, value] of Object.entries(fields)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+    }
+    
+    document.body.appendChild(form);
+    form.submit();
+});
+
+// Export chart as PNG
+document.getElementById('exportChart').addEventListener('click', function() {
+    if (currentChart) {
+        const canvas = document.getElementById('myChart');
+        const url = canvas.toDataURL('image/png');
+        
+        const link = document.createElement('a');
+        link.download = `chart_${Date.now()}.png`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+});
+</script>
+{% endblock %}

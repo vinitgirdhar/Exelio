@@ -219,6 +219,47 @@
     }
 }
 
+/* AI Features Styling */
+.ai-insight-card {
+    border-left: 4px solid var(--bs-success);
+    background: linear-gradient(135deg, rgba(var(--bs-success-rgb), 0.05) 0%, rgba(var(--bs-info-rgb), 0.05) 100%);
+}
+
+.ai-recommendation {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.ai-recommendation:hover {
+    background-color: rgba(var(--bs-primary-rgb), 0.1);
+    transform: translateY(-2px);
+}
+
+.quality-score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: conic-gradient(var(--bs-success) 0deg, var(--bs-warning) 180deg, var(--bs-danger) 360deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.quality-score-circle::before {
+    content: '';
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: var(--bs-body-bg);
+}
+
+.quality-score-circle .score {
+    position: relative;
+    z-index: 1;
+}
+
 /* Accessibility improvements */
 .btn:focus,
 .form-control:focus,

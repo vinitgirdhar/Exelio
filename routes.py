@@ -11,6 +11,7 @@ import logging
 from app import app, db
 from models import User, Upload, DataEntry, Chart
 from utils import allowed_file, parse_excel_file, generate_chart_data
+from ai_insights import analyze_data_with_ai, generate_chart_recommendations, get_data_quality_insights
 
 @app.route('/')
 def index():
@@ -216,10 +217,14 @@ def view_data(upload_id):
         except json.JSONDecodeError:
             continue
     
+    # Generate AI chart recommendations
+    chart_recommendations = generate_chart_recommendations(columns, preview_data)
+    
     return render_template('visualize.html', 
                          upload=upload,
                          preview_data=preview_data,
-                         columns=columns)
+                         columns=columns,
+                         chart_recommendations=chart_recommendations)
 
 @app.route('/api/chart-data/<int:upload_id>')
 @login_required
@@ -312,6 +317,44 @@ def delete_upload(upload_id):
         flash('Failed to delete upload.', 'danger')
     
     return redirect(url_for('dashboard'))
+
+@app.route('/ai-insights/<int:upload_id>')
+@login_required
+def ai_insights(upload_id):
+    """Show AI-powered insights for uploaded data"""
+    upload = Upload.query.filter_by(id=upload_id, user_id=current_user.id).first()
+    
+    if not upload:
+        flash('Upload not found.', 'danger')
+        return redirect(url_for('dashboard'))
+    
+    if not upload.parsed:
+        flash('This file has not been parsed successfully.', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    # Get all data entries for AI analysis
+    data_entries = DataEntry.query.filter_by(upload_id=upload_id).all()
+    
+    if not data_entries:
+        flash('No data found in this upload.', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Get AI insights
+        ai_analysis = analyze_data_with_ai(data_entries, upload.original_filename)
+        
+        # Get data quality insights
+        quality_report = get_data_quality_insights(data_entries)
+        
+        return render_template('ai_insights.html',
+                             upload=upload,
+                             ai_analysis=ai_analysis,
+                             quality_report=quality_report)
+                             
+    except Exception as e:
+        logging.error(f"AI insights error: {e}")
+        flash('Unable to generate AI insights at this time.', 'warning')
+        return redirect(url_for('view_data', upload_id=upload_id))
 
 @app.errorhandler(404)
 def not_found_error(error):

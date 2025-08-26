@@ -1,8 +1,8 @@
-# Excel Analytics Platform
+# Exelio
 
 ## Overview
 
-The Excel Analytics Platform is a Flask-based web application that enables users to upload Excel files (.xls/.xlsx), parse and store the data in a SQL database, and generate interactive visualizations. The platform features user authentication, file upload management, data processing capabilities, and a dashboard for viewing upload history and analytics.
+Exelio is a Flask-based web application that enables users to upload Excel files (.xls/.xlsx), parse and store the data in a SQL database, and generate interactive visualizations with AI-powered insights. The platform features user authentication, file upload management, data processing capabilities, AI analysis using Gemini, and a dashboard for viewing upload history and analytics.
 
 ## User Preferences
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Excel Analytics Platform{% endblock %}
+{% block title %}Dashboard - Exelio{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -97,6 +97,10 @@
                                         <a href="{{ url_for('view_data', upload_id=upload.id) }}" 
                                            class="btn btn-outline-primary">
                                             <i class="fas fa-chart-bar me-1"></i>Visualize
+                                        </a>
+                                        <a href="{{ url_for('ai_insights', upload_id=upload.id) }}" 
+                                           class="btn btn-outline-success">
+                                            <i class="fas fa-brain me-1"></i>AI Insights
                                         </a>
                                     {% endif %}
                                     

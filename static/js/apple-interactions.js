@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeIOSNavigationEffects();
     initializeSwipeGestures();
     initializePullToRefresh();
-    createIOSLoadingStates();
 });
 
 // Initialize iOS-style navigation effects

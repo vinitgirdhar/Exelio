@@ -37,8 +37,10 @@
                 {% if quality_report and not quality_report.get('error') %}
                     <div class="text-center mb-3">
                         <div class="progress-circle">
-                            <span class="display-6 fw-bold text-primary">{{ "%.0f"|format(quality_report.quality_score) }}%</span>
-                            <p class="text-muted mb-0">Quality Score</p>
+                            <div class="progress-circle-content">
+                                <span class="display-4 fw-bold text-primary">{{ "%.0f"|format(quality_report.quality_score) }}%</span>
+                                <small class="text-muted d-block" style="font-size: 0.75rem; margin-top: -5px;">Quality Score</small>
+                            </div>
                         </div>
                     </div>
                     
@@ -221,29 +223,33 @@
 .progress-circle {
     position: relative;
     display: inline-block;
-    width: 120px;
-    height: 120px;
+    width: 140px;
+    height: 140px;
     border-radius: 50%;
     background: conic-gradient(var(--bs-primary) {{ "%.0f"|format(quality_report.quality_score * 3.6) if quality_report and not quality_report.get('error') else 0 }}deg, var(--bs-gray-300) 0deg);
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
 }
 
 .progress-circle::before {
     content: '';
     position: absolute;
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     background: var(--bs-body-bg);
 }
 
-.progress-circle span,
-.progress-circle p {
+.progress-circle-content {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
 }
 </style>
 {% endblock %}

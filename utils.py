@@ -33,9 +33,19 @@ def parse_excel_file(filepath, upload_id):
                 cleaned_columns = []
                 for i, col in enumerate(df.columns):
                     col = col.strip()
-                    if col.startswith('Unnamed:') or col == '' or col == 'nan':
-                        cleaned_columns.append(f"Column_{i+1}")
+                    # Only rename if truly unnamed (pandas auto-generated names)
+                    if col.startswith('Unnamed:') or col == '' or col == 'nan' or col == 'None':
+                        # Try to use first row as header if it contains text
+                        if len(df) > 0:
+                            first_row_val = df.iloc[0, i]
+                            if pd.notna(first_row_val) and str(first_row_val).strip():
+                                cleaned_columns.append(str(first_row_val).strip())
+                            else:
+                                cleaned_columns.append(f"Column_{i+1}")
+                        else:
+                            cleaned_columns.append(f"Column_{i+1}")
                     else:
+                        # Keep the original column name
                         cleaned_columns.append(col)
                 df.columns = cleaned_columns
                 

@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeTouchGestures();
     initializeIOSNavigationEffects();
     initializeSwipeGestures();
-    initializePullToRefresh();
 });
 
 // Initialize iOS-style navigation effects
@@ -197,70 +196,7 @@ function handleSwipeLeft() {
     console.log('Swipe left detected');
 }
 
-// iOS-style pull to refresh
-function initializePullToRefresh() {
-    let startY, pullDistance = 0;
-    let isPulling = false;
-    
-    const pullIndicator = document.createElement('div');
-    pullIndicator.className = 'pull-to-refresh-indicator';
-    pullIndicator.innerHTML = `
-        <div class="pull-refresh-spinner"></div>
-        <div class="pull-refresh-text">Pull to refresh</div>
-    `;
-    document.body.insertBefore(pullIndicator, document.body.firstChild);
-    
-    document.addEventListener('touchstart', function(e) {
-        if (window.scrollY === 0) {
-            startY = e.touches[0].clientY;
-            isPulling = true;
-        }
-    }, { passive: true });
-    
-    document.addEventListener('touchmove', function(e) {
-        if (!isPulling || window.scrollY > 0) return;
-        
-        const currentY = e.touches[0].clientY;
-        pullDistance = Math.max(0, currentY - startY);
-        
-        if (pullDistance > 10) {
-            e.preventDefault();
-            const progress = Math.min(pullDistance / 100, 1);
-            
-            pullIndicator.style.transform = `translateY(${pullDistance - 60}px)`;
-            pullIndicator.style.opacity = progress;
-            
-            if (pullDistance > 80) {
-                pullIndicator.classList.add('ready-to-refresh');
-                pullIndicator.querySelector('.pull-refresh-text').textContent = 'Release to refresh';
-            } else {
-                pullIndicator.classList.remove('ready-to-refresh');
-                pullIndicator.querySelector('.pull-refresh-text').textContent = 'Pull to refresh';
-            }
-        }
-    }, { passive: false });
-    
-    document.addEventListener('touchend', function() {
-        if (!isPulling) return;
-        
-        if (pullDistance > 80) {
-            // Trigger refresh
-            pullIndicator.classList.add('refreshing');
-            pullIndicator.querySelector('.pull-refresh-text').textContent = 'Refreshing...';
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
-        
-        pullIndicator.style.transform = 'translateY(-60px)';
-        pullIndicator.style.opacity = '0';
-        pullIndicator.classList.remove('ready-to-refresh');
-        
-        isPulling = false;
-        pullDistance = 0;
-    });
-}
+// Pull-to-refresh removed for cleaner mobile experience
 
 function initializeScrollEffects() {
     // Intersection Observer for scroll animations

@@ -416,31 +416,15 @@
     gap: 8px;
 }
 
-.logo-icon {
-    width: 32px;
-    height: 32px;
-    background: var(--primary-black);
-    border-radius: 8px;
-    position: relative;
-    transition: all 0.3s var(--ios-ease);
+/* Logo styling with actual image */
+.logo-container img {
+    transition: all 0.3s var(--ios-spring);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-.logo-icon::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 16px;
-    height: 16px;
-    background: white;
-    border-radius: 4px;
-    clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
-}
-
-.logo-icon:hover {
+.logo-container:hover img {
     transform: scale(1.05);
-    background: var(--primary-dark);
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
 .logo-text {

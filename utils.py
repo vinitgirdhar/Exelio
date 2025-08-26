@@ -28,9 +28,10 @@ def parse_excel_file(filepath, upload_id):
                 if df.empty:
                     continue
                 
-                # Clean column names
+                # Clean column names and handle unnamed columns
                 df.columns = df.columns.astype(str)
-                df.columns = [col.strip() for col in df.columns]
+                df.columns = [col.strip() if not col.startswith('Unnamed:') else f"Column_{i+1}" 
+                             for i, col in enumerate(df.columns)]
                 
                 # Convert to records and store
                 for index, row in df.iterrows():
@@ -73,6 +74,14 @@ def parse_excel_file(filepath, upload_id):
 def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
     """Generate chart data for visualization"""
     try:
+        # Validate input columns
+        if not x_axis or not y_axis:
+            raise ValueError("Please select both X and Y axis columns")
+            
+        # Check for invalid column names
+        if x_axis.startswith('Unnamed:') or y_axis.startswith('Unnamed:'):
+            raise ValueError("Invalid column selected. Please choose columns with proper names")
+        
         # Get data entries
         data_entries = DataEntry.query.filter_by(upload_id=upload_id).all()
         
@@ -81,27 +90,45 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
         
         # Parse data
         data_rows = []
+        missing_columns = set()
+        non_numeric_count = 0
+        
         for entry in data_entries:
             try:
                 row_data = json.loads(entry.data_json)
-                if x_axis in row_data and y_axis in row_data:
-                    x_val = row_data[x_axis]
-                    y_val = row_data[y_axis]
+                
+                # Check if columns exist
+                if x_axis not in row_data:
+                    missing_columns.add(x_axis)
+                    continue
+                if y_axis not in row_data:
+                    missing_columns.add(y_axis)
+                    continue
                     
-                    # Skip None values
-                    if x_val is not None and y_val is not None:
-                        # Try to convert y_val to numeric
-                        try:
-                            y_val = float(y_val)
-                        except (ValueError, TypeError):
-                            continue
-                        
-                        data_rows.append({'x': x_val, 'y': y_val})
+                x_val = row_data[x_axis]
+                y_val = row_data[y_axis]
+                
+                # Skip None values
+                if x_val is not None and y_val is not None:
+                    # Try to convert y_val to numeric
+                    try:
+                        y_val = float(y_val)
+                    except (ValueError, TypeError):
+                        non_numeric_count += 1
+                        continue
+                    
+                    data_rows.append({'x': str(x_val), 'y': y_val})
             except json.JSONDecodeError:
                 continue
         
+        if missing_columns:
+            raise ValueError(f"Column(s) not found: {', '.join(missing_columns)}")
+            
         if not data_rows:
-            raise ValueError(f"No valid numeric data found for axes {x_axis} and {y_axis}")
+            if non_numeric_count > 0:
+                raise ValueError(f"The Y-axis column '{y_axis}' does not contain numeric data")
+            else:
+                raise ValueError(f"No valid data found for the selected columns")
         
         # Create DataFrame for processing
         df = pd.DataFrame(data_rows)

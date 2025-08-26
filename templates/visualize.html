@@ -57,7 +57,9 @@
                         <select class="form-select" id="xAxis" required>
                             <option value="">Select X-axis column</option>
                             {% for column in columns %}
-                            <option value="{{ column }}">{{ column }}</option>
+                                {% if not column.startswith('Unnamed:') %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endif %}
                             {% endfor %}
                         </select>
                     </div>
@@ -69,7 +71,9 @@
                         <select class="form-select" id="yAxis" required>
                             <option value="">Select Y-axis column</option>
                             {% for column in columns %}
-                            <option value="{{ column }}">{{ column }}</option>
+                                {% if not column.startswith('Unnamed:') %}
+                                    <option value="{{ column }}">{{ column }}</option>
+                                {% endif %}
                             {% endfor %}
                         </select>
                     </div>
@@ -223,7 +227,8 @@ async function generateChart() {
         const response = await fetch(`/api/chart-data/${uploadId}?chart_type=${chartType}&x_axis=${encodeURIComponent(xAxis)}&y_axis=${encodeURIComponent(yAxis)}`);
         
         if (!response.ok) {
-            throw new Error('Failed to fetch chart data');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch chart data');
         }
         
         const chartData = await response.json();

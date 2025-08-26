@@ -247,7 +247,7 @@ def api_chart_data(upload_id):
         return jsonify(chart_data)
     except Exception as e:
         logging.error(f"Chart data error: {e}")
-        return jsonify({'error': 'Failed to generate chart data'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/save-chart', methods=['POST'])
 @login_required

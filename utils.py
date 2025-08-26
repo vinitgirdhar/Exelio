@@ -111,16 +111,32 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
             try:
                 row_data = json.loads(entry.data_json)
                 
-                # Check if columns exist
-                if x_axis not in row_data:
+                # Check if columns exist (handle case variations)
+                # Try exact match first
+                x_col = x_axis if x_axis in row_data else None
+                y_col = y_axis if y_axis in row_data else None
+                
+                # If not found, try case-insensitive match
+                if not x_col:
+                    for key in row_data.keys():
+                        if key.lower() == x_axis.lower():
+                            x_col = key
+                            break
+                if not y_col:
+                    for key in row_data.keys():
+                        if key.lower() == y_axis.lower():
+                            y_col = key
+                            break
+                
+                if not x_col:
                     missing_columns.add(x_axis)
                     continue
-                if y_axis not in row_data:
+                if not y_col:
                     missing_columns.add(y_axis)
                     continue
                     
-                x_val = row_data[x_axis]
-                y_val = row_data[y_axis]
+                x_val = row_data[x_col]
+                y_val = row_data[y_col]
                 
                 # Skip None values
                 if x_val is not None and y_val is not None:
@@ -266,12 +282,13 @@ def auto_select_columns(upload_id, chart_type):
         all_columns = []
         
         for col, info in columns_info.items():
-            if info['total'] > 0:
+            # Skip columns that are mostly empty
+            if info['total'] > 0 and (info['numeric'] > 0 or info['text'] > 0):
                 all_columns.append(col)
-                # Check if it's mostly numeric (more than 50% numeric values)
-                if info['numeric'] > 0 and info['numeric'] >= info['text']:
+                # Check if it's mostly numeric (more numeric than text values)
+                if info['numeric'] > info['text']:
                     numeric_columns.append(col)
-                else:
+                elif info['text'] > 0:
                     text_columns.append(col)
         
         # Log column analysis
@@ -283,19 +300,31 @@ def auto_select_columns(upload_id, chart_type):
         
         if chart_type == 'pie':
             # For pie charts, need a category and a value
+            # Filter out mostly empty unnamed columns
+            valid_text_cols = [col for col in text_columns if not col.startswith('Unnamed:') or columns_info[col]['text'] > 2]
+            valid_numeric_cols = [col for col in numeric_columns if not col.startswith('Unnamed:') or columns_info[col]['numeric'] > 2]
+            
+            # If no valid columns, use all columns
+            if not valid_text_cols:
+                valid_text_cols = text_columns
+            if not valid_numeric_cols:
+                valid_numeric_cols = numeric_columns
+            
             # First try text column for categories and numeric for values
-            if text_columns and numeric_columns:
-                x_axis = text_columns[0]  # Category
-                y_axis = numeric_columns[0]  # Value
+            if valid_text_cols and valid_numeric_cols:
+                x_axis = valid_text_cols[0]  # Category
+                y_axis = valid_numeric_cols[0]  # Value
             # If only numeric columns exist, use them
-            elif len(numeric_columns) >= 2:
-                x_axis = numeric_columns[0]
-                y_axis = numeric_columns[1]
-            # Use any available columns
+            elif len(valid_numeric_cols) >= 2:
+                x_axis = valid_numeric_cols[0]
+                y_axis = valid_numeric_cols[1]
+            # Use any available columns with data
             elif len(all_columns) >= 2:
-                x_axis = all_columns[0]
-                y_axis = all_columns[1]
-            # Last resort - use same column for both if only one exists
+                # Pick columns with most data
+                sorted_cols = sorted(all_columns, key=lambda c: columns_info[c]['total'], reverse=True)
+                x_axis = sorted_cols[0]
+                y_axis = sorted_cols[1] if len(sorted_cols) > 1 else sorted_cols[0]
+            # Last resort - use any column
             elif len(all_columns) >= 1:
                 x_axis = all_columns[0]
                 y_axis = all_columns[0]

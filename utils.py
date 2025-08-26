@@ -175,8 +175,41 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
         if chart_type == 'pie':
             # For pie charts, group by x and sum y values
             grouped = df.groupby('x')['y'].sum().reset_index()
-            labels = grouped['x'].tolist()
-            values = grouped['y'].tolist()
+            grouped = grouped.sort_values('y', ascending=False)  # Sort by value
+            
+            # Smart categorization: Group small slices into "Others"
+            total = grouped['y'].sum()
+            threshold = 0.03  # 3% threshold
+            
+            main_data = []
+            others_value = 0
+            
+            for _, row in grouped.iterrows():
+                percentage = (row['y'] / total) if total > 0 else 0
+                if percentage >= threshold or len(main_data) < 5:  # Keep at least top 5
+                    main_data.append({'label': str(row['x']), 'value': row['y']})
+                else:
+                    others_value += row['y']
+            
+            # Add "Others" category if needed
+            if others_value > 0:
+                main_data.append({'label': 'Others', 'value': others_value})
+            
+            labels = [item['label'] for item in main_data]
+            values = [item['value'] for item in main_data]
+            
+            # Calculate percentages for display
+            percentages = [(v / total * 100) if total > 0 else 0 for v in values]
+            
+            # Modern color palette
+            modern_colors = [
+                '#6366F1', '#8B5CF6', '#EC4899', '#EF4444', '#F97316',
+                '#F59E0B', '#10B981', '#06B6D4', '#3B82F6', '#6B7280',
+                '#84CC16', '#F43F5E', '#8B5A2B', '#6366F1', '#14B8A6'
+            ]
+            
+            # Create gradient colors (darker shades for borders)
+            border_colors = [color.replace('#', '#aa') if not color.startswith('#aa') else color for color in modern_colors]
             
             return {
                 'type': 'pie',
@@ -184,12 +217,17 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
                     'labels': labels,
                     'datasets': [{
                         'data': values,
-                        'backgroundColor': [
-                            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-                            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-                        ]
+                        'backgroundColor': modern_colors[:len(values)],
+                        'borderColor': border_colors[:len(values)],
+                        'borderWidth': 2,
+                        'hoverBorderWidth': 3,
+                        'hoverBorderColor': '#fff',
+                        'percentages': percentages
                     }]
-                }
+                },
+                'total_records': len(df),
+                'x_axis': x_axis,
+                'y_axis': y_axis
             }
         
         elif chart_type in ['bar', 'line']:
@@ -197,12 +235,16 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
             if chart_type == 'bar':
                 # For bar charts, group by x and sum y values
                 grouped = df.groupby('x')['y'].sum().reset_index()
+                grouped = grouped.sort_values('y', ascending=False)  # Sort by value
             else:
                 # For line charts, keep original order
                 grouped = df.drop_duplicates(subset=['x']).sort_values('x')
             
             labels = grouped['x'].tolist()
             values = grouped['y'].tolist()
+            
+            # Modern colors for consistency
+            primary_color = '#6366F1'  # Modern indigo
             
             return {
                 'type': chart_type,
@@ -211,12 +253,21 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
                     'datasets': [{
                         'label': y_axis,
                         'data': values,
-                        'backgroundColor': '#36A2EB' if chart_type == 'bar' else 'transparent',
-                        'borderColor': '#36A2EB',
+                        'backgroundColor': primary_color if chart_type == 'bar' else 'rgba(99, 102, 241, 0.1)',
+                        'borderColor': primary_color,
                         'borderWidth': 2,
-                        'fill': chart_type == 'line'
+                        'fill': chart_type == 'line',
+                        'tension': 0.3 if chart_type == 'line' else 0,  # Smooth line curves
+                        'pointBackgroundColor': primary_color,
+                        'pointBorderColor': '#fff',
+                        'pointBorderWidth': 2,
+                        'pointRadius': 4,
+                        'pointHoverRadius': 6
                     }]
-                }
+                },
+                'total_records': len(df),
+                'x_axis': x_axis,
+                'y_axis': y_axis
             }
         
         elif chart_type == 'scatter':
@@ -226,10 +277,19 @@ def generate_chart_data(upload_id, x_axis, y_axis, chart_type):
                     'datasets': [{
                         'label': f'{y_axis} vs {x_axis}',
                         'data': [{'x': row['x'], 'y': row['y']} for row in data_rows],
-                        'backgroundColor': '#FF6384',
-                        'borderColor': '#FF6384'
+                        'backgroundColor': 'rgba(236, 72, 153, 0.6)',  # Modern pink with transparency
+                        'borderColor': '#EC4899',
+                        'borderWidth': 1,
+                        'pointRadius': 5,
+                        'pointHoverRadius': 7,
+                        'pointHoverBackgroundColor': '#EC4899',
+                        'pointHoverBorderColor': '#fff',
+                        'pointHoverBorderWidth': 2
                     }]
-                }
+                },
+                'total_records': len(df),
+                'x_axis': x_axis,
+                'y_axis': y_axis
             }
         
         else:

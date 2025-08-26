@@ -253,36 +253,166 @@ function displayChart(chartData, title) {
         currentChart.destroy();
     }
     
-    // Configure chart options
-    const config = {
-        type: chartData.type,
-        data: chartData.data,
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: !!title,
-                    text: title,
-                    font: {
-                        size: 16
+    // Enhanced configuration for pie charts
+    if (chartData.type === 'pie') {
+        // Calculate percentages if not provided
+        if (chartData.data.datasets[0] && !chartData.data.datasets[0].percentages) {
+            const total = chartData.data.datasets[0].data.reduce((a, b) => a + b, 0);
+            chartData.data.datasets[0].percentages = chartData.data.datasets[0].data.map(v => 
+                ((v / total) * 100).toFixed(1)
+            );
+        }
+        
+        const config = {
+            type: 'pie',
+            data: chartData.data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    animateRotate: true,
+                    animateScale: true,
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: title || `${chartData.y_axis || 'Values'} by ${chartData.x_axis || 'Categories'}`,
+                        font: {
+                            size: 18,
+                            weight: 'bold'
+                        },
+                        padding: 20
+                    },
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        labels: {
+                            generateLabels: function(chart) {
+                                const data = chart.data;
+                                const datasets = data.datasets;
+                                const labels = data.labels;
+                                const dataset = datasets[0];
+                                const total = dataset.data.reduce((a, b) => a + b, 0);
+                                
+                                return labels.map((label, i) => {
+                                    const value = dataset.data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}: ${percentage}%`,
+                                        fillStyle: dataset.backgroundColor[i],
+                                        hidden: false,
+                                        index: i,
+                                        strokeStyle: dataset.borderColor ? dataset.borderColor[i] : undefined,
+                                        lineWidth: 2
+                                    };
+                                });
+                            },
+                            padding: 15,
+                            font: { 
+                                size: 12,
+                                family: '-apple-system, BlinkMacSystemFont, sans-serif'
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'circle'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                        titleFont: { 
+                            size: 14, 
+                            weight: 'bold',
+                            family: '-apple-system, BlinkMacSystemFont, sans-serif'
+                        },
+                        bodyFont: { 
+                            size: 13,
+                            family: '-apple-system, BlinkMacSystemFont, sans-serif'
+                        },
+                        cornerRadius: 8,
+                        displayColors: true,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const dataset = context.dataset;
+                                const total = dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return [
+                                    `${label}`,
+                                    `Count: ${value.toLocaleString()}`,
+                                    `Percentage: ${percentage}%`,
+                                    `Total Records: ${chartData.total_records || total}`
+                                ];
+                            }
+                        }
+                    },
+                    datalabels: {
+                        display: true,
+                        color: '#fff',
+                        font: {
+                            weight: 'bold',
+                            size: 12
+                        },
+                        formatter: (value, ctx) => {
+                            const sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / sum) * 100).toFixed(1);
+                            return percentage > 5 ? percentage + '%' : '';  // Only show if > 5%
+                        }
                     }
                 },
-                legend: {
-                    display: chartData.type === 'pie'
-                }
-            },
-            scales: chartData.type !== 'pie' ? {
-                y: {
-                    beginAtZero: true
-                }
-            } : {}
-        }
-    };
-    
-    // Create new chart
-    const ctx = canvas.getContext('2d');
-    currentChart = new Chart(ctx, config);
+                hover: {
+                    mode: 'nearest',
+                    intersect: true,
+                    animationDuration: 200
+                },
+                elements: {
+                    arc: {
+                        hoverOffset: 8,
+                        borderAlign: 'center'
+                    }
+                },
+                cutout: '30%'  // Creates a donut effect for modern look
+            }
+        };
+        
+        // Create new chart
+        const ctx = canvas.getContext('2d');
+        currentChart = new Chart(ctx, config);
+        
+    } else {
+        // Standard configuration for other chart types
+        const config = {
+            type: chartData.type,
+            data: chartData.data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: !!title,
+                        text: title,
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        display: true
+                    }
+                },
+                scales: chartData.type !== 'pie' ? {
+                    y: {
+                        beginAtZero: true
+                    }
+                } : {}
+            }
+        };
+        
+        // Create new chart
+        const ctx = canvas.getContext('2d');
+        currentChart = new Chart(ctx, config);
+    }
 }
 
 // Save chart functionality
